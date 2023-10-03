@@ -1,22 +1,37 @@
 import {
-  Banner,
-  useApi,
-  useTranslate,
   reactExtension,
-} from '@shopify/ui-extensions-react/checkout';
+  Text,
+  useApi,
+  useTarget,
+} from "@shopify/ui-extensions-react/checkout";
+import { useEffect, useState } from "react";
 
 export default reactExtension(
-  'purchase.checkout.block.render',
-  () => <Extension />,
+  "purchase.checkout.cart-line-item.render-after",
+  () => <Extension />
 );
 
 function Extension() {
-  const translate = useTranslate();
-  const { extension } = useApi();
+  const {
+    merchandise: { id, selectedOptions, product },
+  } = useTarget();
+  const [sku, setSku] = useState()
+  const {query} = useApi();
 
-  return (
-    <Banner title="show-sku">
-      {translate('welcome', {target: extension.target})}
-    </Banner>
-  );
+  useEffect(() => {
+    query(
+      `query ($productId: ID!, $selectedOptions: [SelectedOptionInput!]!) {
+        product(id: $productId) {
+          variantBySelectedOptions(selectedOptions: $selectedOptions) {
+            sku
+          }
+        }
+      }`,
+      { variables: { productId: product.id, selectedOptions: selectedOptions } }
+    )
+    .then(data => {
+      setSku(data.data.product.variantBySelectedOptions.sku);
+    });
+  }, [query])
+  return <Text>SKU: {sku}</Text>; 
 }
